@@ -42,10 +42,15 @@ contract Crowdsourcing {
 	event Aggregate(bytes aggregation, bytes share, bytes attestatino, uint request_id);
 	event Approve(uint request_id);
 	event Claim(address user, uint amount ,uint request_id);
+	event ReceiveFund(uint amount, address supporter);
 
-	constructor () public {
+	constructor () public payable {
 		stage = Stages.solicit;
 		owner = msg.sender;
+	}
+	
+	function () public payable {
+	    emit ReceiveFund(msg.value, msg.sender);
 	}
 
 	modifier atStage (Stages _stage) {
@@ -58,7 +63,11 @@ contract Crowdsourcing {
 	}
 
 	function nextStage() internal {
-		stage = Stages(uint(stage) + 1);		
+	    if(stage == Stages.claim) {
+	        stage = Stages.solicit;
+	    } else {
+	        stage = Stages(uint(stage) + 1);
+	    }
 	}
 
 	function solicit(uint data_fee, uint service_fee, address service_provider, uint target, uint request_id) public atStage(Stages.solicit) {
@@ -86,6 +95,7 @@ contract Crowdsourcing {
 
 	function submit(address data_provider, bytes data, bytes proof) public atStage(Stages.submit) {
 		bytes32 request_hash = requestHash();
+		require(register_dict[request_hash][data_provider]);
 		require(!submit_dict[request_hash][data_provider]);
 		submit_dict[request_hash][data_provider] = true;
 		submit_data[request_hash].push(data);
@@ -113,6 +123,7 @@ contract Crowdsourcing {
 
 	function claim(address user) public atStage(Stages.claim) {
 		bytes32 request_hash = requestHash();
+		require(submit_dict[request_hash][user] || user == request.service_provider);
 		require(!claim_dict[request_hash][user]);
 		claim_dict[request_hash][user] = true;
 		claim_array[request_hash].push(user);
