@@ -36,9 +36,9 @@ contract Crowdsourcing {
 	event Solicit(uint data_fee, uint service_fee, address service_provider, uint target, uint request_id);
 	event Register(address data_provider, uint request_id);
 	event RegisterCollected(uint request_id);
-	event Submit(address data_provider,  uint request_id);
+	event Submit(address data_provider, bytes data, bytes proof, uint request_id);
 	event SubmitCollected(uint request_id);
-	event Aggregate(uint request_id);
+	event Aggregate(bytes aggregation, bytes share, bytes attestatino, uint request_id);
 	event Approve(uint request_id);
 	event Claim(address user, uint amount ,uint request_id);
 	event ReceiveFund(uint amount, address supporter);
@@ -70,7 +70,6 @@ contract Crowdsourcing {
 	}
 
 	function solicit(uint data_fee, uint service_fee, address service_provider, uint target, uint request_id) public atStage(Stages.solicit) {
-	    require(msg.sender == owner);	
 		require(address(this).balance > data_fee + service_fee);
 		request.data_fee = data_fee;
 		request.service_fee = service_fee;
@@ -81,8 +80,7 @@ contract Crowdsourcing {
 		emit Solicit(data_fee, service_fee, service_provider, target, request.id);
 	} 
 
-	function register() public atStage(Stages.register) {
-	    address data_provider = msg.sender;
+	function register(address data_provider) public atStage(Stages.register) {
 		bytes32 request_hash = requestHash();
 		require(!register_dict[request_hash][data_provider]);
 		register_dict[request_hash][data_provider] = true;
@@ -94,15 +92,14 @@ contract Crowdsourcing {
 		}
 	}
 
-	function submit(bytes data, bytes proof) public atStage(Stages.submit) {
-		address data_provider = msg.sender;
+	function submit(address data_provider, bytes data, bytes proof) public atStage(Stages.submit) {
 		bytes32 request_hash = requestHash();
 		require(register_dict[request_hash][data_provider]);
 		require(!submit_dict[request_hash][data_provider]);
 		submit_dict[request_hash][data_provider] = true;
 		submit_data[request_hash].push(data);
 		submit_proof[request_hash].push(proof);
-		emit Submit(data_provider,request.id);
+		emit Submit(data_provider, data, proof, request.id);
 		if(submit_data[request_hash].length == request.target){
 			nextStage();
 			emit SubmitCollected(request.id);
@@ -110,23 +107,20 @@ contract Crowdsourcing {
 	}
 
 	function aggregate(bytes aggregation, bytes share, bytes attestatino) public atStage(Stages.aggregate) {
-	    require(msg.sender == owner);
 		bytes32 request_hash = requestHash();
 		aggregate_aggregation[request_hash] = aggregation;
 		aggregate_share[request_hash] = share;
 		aggregate_attestatino[request_hash] = attestatino;
 		nextStage();
-		emit Aggregate(request.id);
+		emit Aggregate(aggregation, share, attestatino, request.id);
 	}
 
 	function approve() public atStage(Stages.approve) {
-	    require(msg.sender == owner);
 		nextStage();
 		emit Approve(request.id);
 	}
 
-	function claim() public atStage(Stages.claim) {
-	    address user = msg.sender;
+	function claim(address user) public atStage(Stages.claim) {
 		bytes32 request_hash = requestHash();
 		require(submit_dict[request_hash][user] || user == request.service_provider);
 		require(!claim_dict[request_hash][user]);
