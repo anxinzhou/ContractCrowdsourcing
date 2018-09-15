@@ -2,62 +2,99 @@ pragma solidity ^0.4.21;
 
 contract Crowdsourcing {
 
+	uint constant public MAX_TASK = 1;
+	uint constant internal TASK_FULL = 10;
+	uint constant internal FALSE = 1;
+	uint constant internal TRUE = 2;
+
 	enum Stages {
+		inital,
 		solicit,
 		register,
 		submit,
 		aggregate,
 		approve,
-		claim,
-		finish
+		claim
 	}
 
 	struct Request {
 		uint data_fee;
 		uint service_fee;
-		address service_provider;
 		uint target;
-		uint id;
-		address owner;
 	}
 
+    struct Submission {
+    	bytes submit_data;
+    	bytes submit_proof;
+    }
+
+    struct DataProvider {
+    	address account;
+    	uint registered;
+    	uint submited;
+    	uint claimed;
+    	Submission submission;
+    }
+
+    struct ServiceProvider {
+    	address account;
+    	uint claimed;
+    }
+
+    struct Aggregation {
+    	bytes aggregation;
+    	bytes share;
+    	bytes attestatino;
+    }
+
 	struct Task {
-		bytes32  task_id;
 		Request  request;
 		Stages  stage;
 		address  owner;
-		mapping(address => bool)  register_dict;
-		address []  register_array;
-		mapping(address => bool)  claim_dict;
-		address []  claim_array;
-		mapping(address => bool)  submit_dict;
-		bytes[]  submit_data;
-		bytes[]  submit_proof;
-		bytes  aggregate_aggregation;
-		bytes  aggregate_share;
-		bytes  aggregate_attestatino;
+		ServiceProvider service_provider;
+		DataProvider [] data_provider;
+		mapping(address => uint) data_provider_id;
+		Aggregation aggregate;
+		uint busy;
+		uint register_count;
+		uint submit_count;
+		uint claim_count;
 	}	
-	mapping(bytes32 => Task) task;
+    
+    uint public lastest_task;
+    //Stages public lastest_stage = Stages.solicit;
+	Task [MAX_TASK] internal task;
 
-	event Solicit(uint data_fee, uint service_fee, address owner, address service_provider, uint target, uint request_id, bytes32 task_id);
-	event Register(address data_provider, bytes32 task_id);
-	event RegisterCollected(bytes32 task_id);
-	event Submit(address data_provider,  bytes32 task_id);
-	event SubmitCollected(bytes32 task_id);
-	event Aggregate(bytes32 task_id);
-	event Approve(bytes32 task_id);
-	event Claim(address user, uint amount ,bytes32 task_id);
-	event ReceiveFund(uint amount, address supporter);
+    
+	// event Solicit(uint data_fee, uint service_fee, address owner, address service_provider, uint target, uint request_id, bytes32 task_id);
+	// event Register(address data_provider, bytes32 task_id);
+	// event RegisterCollected(bytes32 task_id);
+	// event Submit(address data_provider,  bytes32 task_id);
+	// event SubmitCollected(bytes32 task_id);
+	// event Aggregate(bytes32 task_id);
+	// event Approve(bytes32 task_id);
+	// event Claim(address user, uint amount ,bytes32 task_id);
+	// event ReceiveFund(uint amount, address supporter);
 
 	constructor () public payable {
 		
 	}
 	
 	function () public payable {
-	    emit ReceiveFund(msg.value, msg.sender);
+	    //emit ReceiveFund(msg.value, msg.sender);
 	}
 
-	function atStage (bytes32 task_id, Stages _stage) internal view returns (bool) {
+	function getEmptyTaskSlot () internal view returns (uint) {
+		for(uint i = 0; i< MAX_TASK ; ++i) {
+			if (task[i].busy == FALSE || task[i].busy == 0){
+				return i;
+			}
+		}
+		//not found
+		return TASK_FULL;
+	}
+
+	function atStage (uint task_id, Stages _stage) internal view returns (bool) {
 		if(task[task_id].stage == _stage){
 			return true;
 		} else {
@@ -65,119 +102,146 @@ contract Crowdsourcing {
 		}
 	}
 
-	function nextStage(bytes32 task_id) internal {
-	    task[task_id].stage = Stages(uint(task[task_id].stage) + 1);
+	function nextStage(uint task_id) internal {
+		if (task[task_id].stage == Stages.claim) {
+			task[task_id].stage = Stages.solicit;
+		} else {
+	    	task[task_id].stage = Stages(uint(task[task_id].stage) + 1);
+		}
+		//lastest_stage = task[task_id].stage;
 	}
 
-	function solicit(uint data_fee, uint service_fee, address service_provider, uint target, uint request_id) public {
+	function solicit(uint data_fee, uint service_fee, address service_provider, uint target) public {
 		require(address(this).balance > data_fee + service_fee);
-		bytes32 task_id = keccak256(abi.encodePacked(data_fee, service_fee, service_provider, target,request_id));
-		require(atStage(task_id, Stages.solicit));
-		task[task_id].request.owner = msg.sender;
-		task[task_id].request.data_fee = data_fee;
-		task[task_id].request.service_fee = service_fee;
-		task[task_id].request.service_provider =service_provider;
-		task[task_id].request.target = target;
-		task[task_id].request.id = request_id;
-		task[task_id].task_id = task_id;
+		uint task_id = getEmptyTaskSlot();
+		//lastest_task = task_id;
+		require(task_id != TASK_FULL);
+		task[task_id].request = Request(data_fee, service_fee, target);
+		task[task_id].owner = msg.sender;
+		task[task_id].service_provider = ServiceProvider(service_provider, FALSE);
+		task[task_id].busy = TRUE;
+		task[task_id].stage = Stages.solicit;
+		task[task_id].register_count = 0;
 		nextStage(task_id);
-		emit Solicit(data_fee, service_fee, msg.sender, service_provider, target, request_id, task_id);
-	} 
-
-	function register(bytes32 task_id) public {
+		//emit Solicit(data_fee, service_fee, msg.sender, service_provider, target, request_id, task_id);
+	}
+    
+	function register(uint task_id) public {
 		require(atStage(task_id, Stages.register));
-		address data_provider = msg.sender;
-		require(!task[task_id].register_dict[data_provider]);
-		task[task_id].register_dict[data_provider] = true;
-		task[task_id].register_array.push(data_provider);
-		emit Register(data_provider, task_id);
-		if(task[task_id].register_array.length == task[task_id].request.target) {
+		address provider = msg.sender;
+		uint id = task[task_id].data_provider_id[provider];
+		uint lastest_id = task[task_id].register_count;
+		require(id == 0 || id > lastest_id || task[task_id].data_provider[id-1].account != provider);
+		if (task[task_id].data_provider.length == lastest_id) {
+		    task[task_id].data_provider.push(DataProvider(provider,TRUE,FALSE,FALSE,Submission("0x1","0x1")));
+		} else{
+		    task[task_id].data_provider[lastest_id].account = provider;
+		    task[task_id].data_provider[lastest_id].registered = TRUE;
+		    task[task_id].data_provider[lastest_id].submited = FALSE;
+		    task[task_id].data_provider[lastest_id].claimed = FALSE;
+		}
+		task[task_id].data_provider_id[provider] = lastest_id + 1;
+		task[task_id].register_count += 1;
+		//emit Register(data_provider, task_id);
+		if(task[task_id].register_count == task[task_id].request.target) {
 			nextStage(task_id);
-			emit RegisterCollected(task_id);
+			task[task_id].submit_count = 0;
+			//emit RegisterCollected(task_id);
 		}
 	}
-
-	function submit(bytes32 task_id, bytes data, bytes proof) public {
+    
+	function submit(uint task_id, bytes data, bytes proof) public {
 		require(atStage(task_id, Stages.submit));
-		address data_provider = msg.sender;
-		require(task[task_id].register_dict[data_provider]);
-		require(!task[task_id].submit_dict[data_provider]);
-		task[task_id].submit_dict[data_provider] = true;
-		task[task_id].submit_data.push(data);
-		task[task_id].submit_proof.push(proof);
-		emit Submit(data_provider, task_id);
-		if(task[task_id].submit_data.length == task[task_id].request.target){
+		address provider = msg.sender;
+		uint id = task[task_id].data_provider_id[provider];
+		require (!(id> task[task_id].register_count || id ==0));
+		require (task[task_id].data_provider[id-1].submited == FALSE);
+ 
+		
+		task[task_id].data_provider[id-1].submited = TRUE;
+		task[task_id].data_provider[id-1].submission.submit_data = data;
+		task[task_id].data_provider[id-1].submission.submit_proof = proof;
+		task[task_id].submit_count += 1;
+		//emit Submit(data_provider, task_id);
+		if(task[task_id].submit_count == task[task_id].request.target){
+			task[task_id].claim_count = 0;
 			nextStage(task_id);
-			emit SubmitCollected(task_id);
+			//emit SubmitCollected(task_id);
 		}
 	}
 
-	function aggregate(bytes32 task_id, bytes aggregation, bytes share, bytes attestatino) public {
+	function aggregate(uint task_id, bytes aggregation, bytes share, bytes attestatino) public {
 	    require(atStage(task_id, Stages.aggregate));
-	   	require(task[task_id].request.service_provider == msg.sender);
-		task[task_id].aggregate_aggregation = aggregation;
-		task[task_id].aggregate_share = share;
-		task[task_id].aggregate_attestatino = attestatino;
+	   	require(task[task_id].service_provider.account == msg.sender);
+	   	task[task_id].aggregate.aggregation = aggregation;
+	   	task[task_id].aggregate.share = share;
+	   	task[task_id].aggregate.attestatino = attestatino;
 		nextStage(task_id);
-		emit Aggregate(task_id);
+		//emit Aggregate(task_id);
 	}
 
-	function approve(bytes32 task_id) public {
+	function approve(uint task_id) public {
 	    require(atStage(task_id, Stages.approve));
-	    require(task[task_id].request.owner == msg.sender);
+	    require(task[task_id].owner == msg.sender);
 		nextStage(task_id);
-		emit Approve(task_id);
+		//emit Approve(task_id);
 	}
 
-	function claim(bytes32 task_id) public {
+	function claim(uint task_id) public {
 		require(atStage(task_id, Stages.claim));
 	    address user = msg.sender;
-		require(task[task_id].submit_dict[user] || user == task[task_id].request.service_provider);
-		require(!task[task_id].claim_dict[user]);
-		task[task_id].claim_dict[user] = true;
-		task[task_id].claim_array.push(user);
-		if(task[task_id].claim_array.length == task[task_id].request.target + 1 ) {  // number of data_provider + service_provider
-			nextStage(task_id);
-		}
-		if (user == task[task_id].request.service_provider) {
+	    uint id = task[task_id].data_provider_id[user];
+	    bool is_data_provider = !(id> task[task_id].register_count || id == 0) && task[task_id].data_provider[id-1].claimed == FALSE;
+	    bool is_service_provider = ( user == task[task_id].service_provider.account && task[task_id].service_provider.claimed==FALSE);
+	    require (is_data_provider || is_service_provider);
+		if (is_service_provider) {
 			address(user).transfer(task[task_id].request.service_fee);
-			emit Claim(user, task[task_id].request.service_fee, task_id);
-		} else {
-			address(user).transfer(task[task_id].request.data_fee/task[task_id].request.target);
-			emit Claim(user, task[task_id].request.data_fee/task[task_id].request.target, task_id);
+			task[task_id].service_provider.claimed = TRUE;
+			task[task_id].claim_count +=1;
+			//emit Claim(user, task[task_id].request.service_fee, task_id);
+		}
+		if (is_data_provider){
+			uint reward = task[task_id].request.data_fee/task[task_id].request.target;
+			address(user).transfer(reward);
+			task[task_id].data_provider[id-1].claimed = TRUE;
+			task[task_id].claim_count +=1;
+			//emit Claim(user, reward, task_id);
+		}
+		if(task[task_id].claim_count == task[task_id].request.target + 1 ) {  // number of data_provider + service_provider
+			task[task_id].busy = FALSE;
 		}
 	}
 
-	function getRequest(bytes32 task_id) public view returns(uint , uint , address , uint , uint ) {
-		return (task[task_id].request.data_fee, task[task_id].request.service_fee, task[task_id].request.service_provider, task[task_id].request.target, task[task_id].request.id);
-	}
+	// function getRequest(bytes32 task_id) public view returns(uint , uint , address , uint , uint ) {
+	// 	return (task[task_id].request.data_fee, task[task_id].request.service_fee, task[task_id].request.service_provider, task[task_id].request.target, task[task_id].request.id);
+	// }
 
-	function getStage(bytes32 task_id) public view returns(uint) {
-		return uint(task[task_id].stage);
-	}
+	// function getStage(bytes32 task_id) public view returns(uint) {
+	// 	return uint(task[task_id].stage);
+	// }
 
-	function getOwner(bytes32 task_id) public view returns(address) {
-		return task[task_id].owner;
-	}
+	// function getOwner(bytes32 task_id) public view returns(address) {
+	// 	return task[task_id].owner;
+	// }
 
-	function isRegistered(bytes32 task_id, address user) public view returns (bool) {
-		return task[task_id].register_dict[user];
-	}
+	// function isRegistered(bytes32 task_id, address user) public view returns (bool) {
+	// 	return task[task_id].register_dict[user];
+	// }
 
-	function isClaimed(bytes32 task_id, address user) public view returns (bool) {
-		return task[task_id].claim_dict[user];
-	}
+	// function isClaimed(bytes32 task_id, address user) public view returns (bool) {
+	// 	return task[task_id].claim_dict[user];
+	// }
 
-	function isSubmit(bytes32 task_id, address user) public view returns (bool) {
-		return task[task_id].submit_dict[user];
-	}
+	// function isSubmit(bytes32 task_id, address user) public view returns (bool) {
+	// 	return task[task_id].submit_dict[user];
+	// }
 
-	function getSumbit(bytes32 task_id, uint index) public view returns (bytes, bytes) {
-	    require(index < task[task_id].submit_data.length);
-		return (task[task_id].submit_data[index],task[task_id].submit_proof[index]);
-	}
+	// function getSumbit(bytes32 task_id, uint index) public view returns (bytes, bytes) {
+	//     require(index < task[task_id].submit_data.length);
+	// 	return (task[task_id].submit_data[index],task[task_id].submit_proof[index]);
+	// }
 
-	function getAggregate(bytes32 task_id) public view returns (bytes, bytes, bytes) {
-		return (task[task_id].aggregate_aggregation, task[task_id].aggregate_share, task[task_id].aggregate_attestatino);
-	}
+	// function getAggregate(bytes32 task_id) public view returns (bytes, bytes, bytes) {
+	// 	return (task[task_id].aggregate_aggregation, task[task_id].aggregate_share, task[task_id].aggregate_attestatino);
+	// }
 }
