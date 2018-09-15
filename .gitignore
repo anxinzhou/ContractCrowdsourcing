@@ -1,0 +1,8 @@
+node_modules
+package_lock.json
+.DS_Store
+geth
+history
+geth.ipc
+bootnode.key
+
