@@ -23,17 +23,13 @@ contract Crowdsourcing {
 		uint target;
 	}
 
-    struct Submission {
-    	bytes submit_data;
-    	bytes submit_proof;
-    }
 
     struct DataProvider {
     	address account;
     	uint registered;
     	uint submited;
     	uint claimed;
-    	Submission submission;
+    	bytes submit_data;
     }
 
     struct ServiceProvider {
@@ -133,7 +129,7 @@ contract Crowdsourcing {
 		uint lastest_id = task[task_id].register_count;
 		require(id == 0 || id > lastest_id || task[task_id].data_provider[id-1].account != provider);
 		if (task[task_id].data_provider.length == lastest_id) {
-		    task[task_id].data_provider.push(DataProvider(provider,TRUE,FALSE,FALSE,Submission("0x1","0x1")));
+		    task[task_id].data_provider.push(DataProvider(provider,TRUE,FALSE,FALSE,"0x1"));
 		} else{
 		    task[task_id].data_provider[lastest_id].account = provider;
 		    task[task_id].data_provider[lastest_id].registered = TRUE;
@@ -150,7 +146,7 @@ contract Crowdsourcing {
 		}
 	}
     
-	function submit(uint task_id, bytes data, bytes proof) public {
+	function submit(uint task_id, bytes data) public {
 		require(atStage(task_id, Stages.submit));
 		address provider = msg.sender;
 		uint id = task[task_id].data_provider_id[provider];
@@ -159,8 +155,7 @@ contract Crowdsourcing {
  
 		
 		task[task_id].data_provider[id-1].submited = TRUE;
-		task[task_id].data_provider[id-1].submission.submit_data = data;
-		task[task_id].data_provider[id-1].submission.submit_proof = proof;
+		task[task_id].data_provider[id-1].submit_data = data;
 		task[task_id].submit_count += 1;
 		//emit Submit(data_provider, task_id);
 		if(task[task_id].submit_count == task[task_id].request.target){
@@ -212,36 +207,4 @@ contract Crowdsourcing {
 		}
 	}
 
-	// function getRequest(bytes32 task_id) public view returns(uint , uint , address , uint , uint ) {
-	// 	return (task[task_id].request.data_fee, task[task_id].request.service_fee, task[task_id].request.service_provider, task[task_id].request.target, task[task_id].request.id);
-	// }
-
-	// function getStage(bytes32 task_id) public view returns(uint) {
-	// 	return uint(task[task_id].stage);
-	// }
-
-	// function getOwner(bytes32 task_id) public view returns(address) {
-	// 	return task[task_id].owner;
-	// }
-
-	// function isRegistered(bytes32 task_id, address user) public view returns (bool) {
-	// 	return task[task_id].register_dict[user];
-	// }
-
-	// function isClaimed(bytes32 task_id, address user) public view returns (bool) {
-	// 	return task[task_id].claim_dict[user];
-	// }
-
-	// function isSubmit(bytes32 task_id, address user) public view returns (bool) {
-	// 	return task[task_id].submit_dict[user];
-	// }
-
-	// function getSumbit(bytes32 task_id, uint index) public view returns (bytes, bytes) {
-	//     require(index < task[task_id].submit_data.length);
-	// 	return (task[task_id].submit_data[index],task[task_id].submit_proof[index]);
-	// }
-
-	// function getAggregate(bytes32 task_id) public view returns (bytes, bytes, bytes) {
-	// 	return (task[task_id].aggregate_aggregation, task[task_id].aggregate_share, task[task_id].aggregate_attestatino);
-	// }
 }
