@@ -1,0 +1,16 @@
+{
+  "name": "src",
+  "version": "1.0.0",
+  "description": "",
+  "main": "contract.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "performance-now": "^2.1.0",
+    "plotly": "^1.0.6",
+    "web3": "^1.0.0-beta.37"
+  }
+}

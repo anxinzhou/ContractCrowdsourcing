@@ -1,0 +1,212 @@
+{
+  "url": "http://127.0.0.1:8540",
+  "gas": "3000000",
+  "gasPrice": "0",
+  "owner": "0x3c62aa7913bc303ee4b9c07df87b556b6770e3fc",
+  "address": "0xc59d5f865b243fc1fec92d301246b47d3398502c",
+  "abi":[
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "clean",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "task_id",
+          "type": "uint256"
+        },
+        {
+          "name": "batch",
+          "type": "uint256"
+        }
+      ],
+      "name": "register",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "data_fee",
+          "type": "uint256"
+        },
+        {
+          "name": "service_fee",
+          "type": "uint256"
+        },
+        {
+          "name": "service_provider",
+          "type": "address"
+        },
+        {
+          "name": "target",
+          "type": "uint256"
+        }
+      ],
+      "name": "solicit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "task_id",
+          "type": "uint256"
+        },
+        {
+          "name": "data",
+          "type": "bytes"
+        },
+        {
+          "name": "id",
+          "type": "uint256"
+        }
+      ],
+      "name": "submit",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "constructor"
+    },
+    {
+      "payable": true,
+      "stateMutability": "payable",
+      "type": "fallback"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "lastest_task",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "MAX_TASK",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "task",
+      "outputs": [
+        {
+          "components": [
+            {
+              "name": "data_fee",
+              "type": "uint256"
+            },
+            {
+              "name": "service_fee",
+              "type": "uint256"
+            },
+            {
+              "name": "target",
+              "type": "uint256"
+            }
+          ],
+          "name": "request",
+          "type": "tuple"
+        },
+        {
+          "name": "stage",
+          "type": "uint8"
+        },
+        {
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "name": "account",
+              "type": "address"
+            },
+            {
+              "name": "claimed",
+              "type": "uint256"
+            }
+          ],
+          "name": "service_provider",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "name": "aggregation",
+              "type": "bytes"
+            },
+            {
+              "name": "share",
+              "type": "bytes"
+            },
+            {
+              "name": "attestatino",
+              "type": "bytes"
+            }
+          ],
+          "name": "aggregate",
+          "type": "tuple"
+        },
+        {
+          "name": "busy",
+          "type": "uint256"
+        },
+        {
+          "name": "register_count",
+          "type": "uint256"
+        },
+        {
+          "name": "submit_count",
+          "type": "uint256"
+        },
+        {
+          "name": "claim_count",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}

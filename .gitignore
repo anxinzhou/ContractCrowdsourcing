@@ -6,3 +6,6 @@ history
 geth.ipc
 bootnode.key
 
+geth
+.idea
+tmp
