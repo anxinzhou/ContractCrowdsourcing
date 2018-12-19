@@ -1,7 +1,18 @@
 const Web3 = require('web3');
-// config = require('./etc/contractConfig');
-config = require('./etc/productionConfig');
-abi = require('./etc/abi.json');
+const productionMode = "p_";
+const testMode = "t_";
+
+const mode = "p_"; //production
+var config;
+if (mode === productionMode) {
+    config = require('./etc/productionConfig');
+} else if(mode === testMode) {
+    config = require('./etc/contractConfig');
+} else {
+    console.log("please specify right mode");
+    process.exit(-1);
+}
+const abi = require('./etc/abi.json');
 
 const web3 = new Web3(new Web3.providers.HttpProvider(config.url));
 const contract = new web3.eth.Contract(abi, config.address);
@@ -14,7 +25,7 @@ const sendOptions = {
 
 function receiptHandler(receipt) {
     return new Promise((resolve,reject)=>{
-        if (receipt.status == '0x0') {
+        if (receipt.status === '0x0') {
             reject(new Error("public pay transaction revert"))
         } else {
             resolve()
@@ -51,5 +62,6 @@ module.exports = {
     solicit: solicit,
     register: register,
     submit: submit,
-    clean: clean
+    clean: clean,
+    mode: mode
 };

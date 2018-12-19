@@ -6,7 +6,7 @@ const fs = require('fs');
 const task_id = 0;
 const graphXSeg = 200;   // how many xpoint in graph
 const dataSize = 3137;  //bytes
-const mode = "p_";
+const mode = contract.mode;
 
 // function register(uint task_id, uint batch)
 // function submit(uint task_id,bytes data,uint id)
@@ -14,13 +14,16 @@ const mode = "p_";
 
 // test(200,1);
 // test(100,20);
-testSequenceSubmit(200,1);
+test1 = ()=>test(100,200);
+test2 = ()=>test(200,1);
+test1.then(test2);
+
 
 function test(round,batch) {
-    cleanWrapper(()=>testAndDrawRegister(true,round,batch,graphXSeg,true,task_id, batch)).then(()=>{
+    return cleanWrapper(()=>testAndDrawRegister(true,round,batch,graphXSeg,true,task_id, batch)).then(()=>
         cleanWrapper(()=>testAndDrawRegister(false,1,batch,graphXSeg,false,task_id, batch))
-            .then(()=>testAndDrawSubmit(true,round,batch,graphXSeg,true,task_id));
-    });
+            .then(()=>testAndDrawSubmit(true,round,batch,graphXSeg,true,task_id))
+    );
 }
 
 async function testSequenceRegister(round,batch) {
@@ -63,7 +66,7 @@ async function calFuncTime(func) {
 async function  testContractFunc(round,func,sequence=false) {
     let tArray=[];
     if(sequence) {
-        time = 0
+        let time = 0;
         for(let i=0;i<round;++i) {
             try {
                 let t = await calFuncTime(func);
@@ -104,7 +107,7 @@ function drawPic (round,batch, tArray, xSeg, save,kind) {
         ++bucket[bucketNumber];
     });
 
-    bucket.forEach((v,i)=> bucket[i]= i==0? v:bucket[i-1]+v);
+    bucket.forEach((v,i)=> bucket[i]= i===0? v:bucket[i-1]+v);
     bucket.forEach((v,i)=> bucket[i]/=tArray.length);
 
     let x = [...Array(xSeg)].map((_,i)=> minT+space*i);
