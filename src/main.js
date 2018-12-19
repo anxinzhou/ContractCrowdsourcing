@@ -4,34 +4,42 @@ const plotly = require('plotly')('xxRanger','0BQcpXpNKPHYYzEKlIst');
 const fs = require('fs');
 
 const task_id = 0;
-const batch = 1000;    // how many transactions sent for one time
-const round = 200;     // how many rounds for sending transactions
 const graphXSeg = 200;   // how many xpoint in graph
-const dataSize = 3000;  //bytes
-const data = '0x'+genRandomString(dataSize*2);
+const dataSize = 3137;  //bytes
+const mode = "p_";
 
 // function register(uint task_id, uint batch)
-// function submit(uint task_id,uint id,bytes data)
+// function submit(uint task_id,bytes data,uint id)
 // function clean()
 
-function testSequenceRegister() {
-    cleanWrapper(()=>testAndDrawRegister(true,round,batch,graphXSeg,true,task_id, batch));
+// test(200,1);
+// test(100,20);
+testSequenceSubmit(200,1);
+
+function test(round,batch) {
+    cleanWrapper(()=>testAndDrawRegister(true,round,batch,graphXSeg,true,task_id, batch)).then(()=>{
+        cleanWrapper(()=>testAndDrawRegister(false,1,batch,graphXSeg,false,task_id, batch))
+            .then(()=>testAndDrawSubmit(true,round,batch,graphXSeg,true,task_id));
+    });
 }
 
-function testNonSequenceRegister() {
-    cleanWrapper(()=>testAndDrawRegister(false,round,batch,graphXSeg,true,task_id, batch));
+async function testSequenceRegister(round,batch) {
+    return cleanWrapper(()=>testAndDrawRegister(true,round,batch,graphXSeg,true,task_id, batch));
 }
 
-function testSequenceSubmit() {
-    cleanWrapper(()=>testAndDrawRegister(false,1,batch,graphXSeg,false,task_id, batch)).then(()=>testAndDrawSubmit(true,round,batch,graphXSeg,true,task_id,data));
+async function testSequenceSubmit(round,batch) {
+    return cleanWrapper(()=>testAndDrawRegister(false,1,batch,graphXSeg,false,task_id, batch))
+        .then(()=>testAndDrawSubmit(true,round,batch,graphXSeg,true,task_id));
 }
 
-function testNonSequenceSubmit() {
-    cleanWrapper(()=>testAndDrawRegister(false,1,batch,graphXSeg,false,task_id, batch)).then(()=>testAndDrawSubmit(false,round,batch,graphXSeg,true,task_id,data));
-}
+// function testNonSequenceRegister(round,batch) {
+//     cleanWrapper(()=>testAndDrawRegister(false,round,batch,graphXSeg,true,task_id, batch));
+// }
 
-testSequenceSubmit();
-// testSequenceRegister();
+// function testNonSequenceSubmit(round,batch) {
+//     cleanWrapper(()=>testAndDrawRegister(false,1,batch,graphXSeg,false,task_id, batch))
+//         .then(()=>testAndDrawSubmit(false,round,batch,graphXSeg,true,task_id));
+// }
 
 function cleanWrapper(func){
     return contract.clean().then(()=>func());
@@ -83,7 +91,7 @@ async function  testContractFunc(round,func,sequence=false) {
     return tArray;
 }
 
-function drawPic (tArray, xSeg, save,kind) {
+function drawPic (round,batch, tArray, xSeg, save,kind) {
     let maxT = tArray.reduce((a,b)=>a>b?a:b);
     let minT = tArray.reduce((a,b)=>a<b?a:b);
     let space = (maxT-minT)/xSeg;
@@ -114,7 +122,7 @@ function drawPic (tArray, xSeg, save,kind) {
 
     // save data and draw
     //
-    fs.writeFile('labdata/'+kind+"batch"+batch+"round"+round,JSON.stringify({
+    fs.writeFile('labdata/'+mode+kind+"batch"+batch+"round"+round,JSON.stringify({
         x:x,
         y:y
     }),(err)=> {
@@ -134,15 +142,17 @@ function testAndDrawRegister(sequence,round,batch,graphXSeg,save,...args) {
             Array.from(Array(batch).keys())
             .map(()=>contract.register(...args))),
         sequence
-    ).then(tArray=>drawPic(tArray,graphXSeg,save,"register"));
+    ).then(tArray=>drawPic(round,batch,tArray,graphXSeg,save,"register"));
 }
 
 function testAndDrawSubmit(sequence,round,batch,graphXSeg,save,...args) {
     return testContractFunc(round,
-        ()=> Promise.all(
-            Array.from(Array(batch).keys())
-                .map((_,i)=>contract.submit(...args,i))),
-        sequence
-    ).then(tArray=>drawPic(tArray,graphXSeg,save,"submit"));
+        ()=> {
+            let data = '0x'+genRandomString(dataSize*2);
+            return Promise.all(
+                Array.from(Array(batch).keys())
+                    .map((_, i) => contract.submit(...args, data, i)))},
+                sequence
+    ).then(tArray=>drawPic(round,batch,tArray,graphXSeg,save,"submit"));
 }
 

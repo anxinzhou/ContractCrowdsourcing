@@ -1,7 +1,7 @@
 {
   "url": "http://127.0.0.1:8540",
   "gas": "3000000",
-  "gasPrice": "0",
+  "gasPrice": "1000000000",
   "owner": "0x3c62aa7913bc303ee4b9c07df87b556b6770e3fc",
-  "address": "0xc57ac71ae34e2d71b95bb0b92d8d60cbdfe9ebe2"
+  "address": "0xb2a0650c4715210bdb91257437b83dfec53d72b6"
 }

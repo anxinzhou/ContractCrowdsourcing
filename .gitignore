@@ -1,4 +1,5 @@
 node_modules
+labdata
 package_lock.json
 .DS_Store
 geth

@@ -1,8 +1,10 @@
 const Web3 = require('web3');
-config = require('./etc/contractConfig');
+// config = require('./etc/contractConfig');
+config = require('./etc/productionConfig');
+abi = require('./etc/abi.json');
 
 const web3 = new Web3(new Web3.providers.HttpProvider(config.url));
-const contract = new web3.eth.Contract(config.abi, config.address);
+const contract = new web3.eth.Contract(abi, config.address);
 const owner = config.owner;
 const sendOptions = {
     from: owner,
