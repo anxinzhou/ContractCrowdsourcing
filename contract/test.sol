@@ -121,7 +121,11 @@ contract Crowdsourcing {
 		//emit Solicit(data_fee, service_fee, msg.sender, service_provider, target, request_id, task_id);
 	}
 
-	function register(uint task_id, uint batch, address provider) public {
+	function register(uint task_id, uint batch) public {
+	    address provider = msg.sender;
+	    if(task[task_id].register_count == batch) {
+	        task[task_id].register_count = 0;
+	    }
 		uint lastest_id = task[task_id].register_count;
 		if (task[task_id].data_provider.length == lastest_id) {
 		    task[task_id].data_provider.push(DataProvider(provider,TRUE,FALSE,FALSE,"0x1"));
@@ -133,22 +137,20 @@ contract Crowdsourcing {
 		}
 		task[task_id].data_provider_id[provider] = lastest_id + 1;
 		task[task_id].register_count += 1;
-		if(task[task_id].register_count == batch) {
-	        task[task_id].register_count = 0;
-	    }
 	}
 
-	function submit(uint task_id,address provider,bytes data) public {
-		uint id = task[task_id].data_provider_id[provider];
+	function submit(uint task_id,bytes data,uint id) public {
 
-		task[task_id].data_provider[id-1].submited = TRUE;
-		task[task_id].data_provider[id-1].submit_data = data;
+		task[task_id].data_provider[id].submited = TRUE;
+		task[task_id].data_provider[id].submit_data = data;
 		task[task_id].submit_count += 1;
 	}
 
 	function clean() public {
-	    for(uint256 i=0;i<MAX_TASK;++i){
-	        delete task[i];
+	    for(uint i=0;i<MAX_TASK;++i) {
+	        delete task[i].data_provider;
+	        task[i].data_provider.length = 0;
+	        delete task[i].register_count;
 	    }
 	}
 
